@@ -2,9 +2,9 @@ function [val grad ] = getFtypeCoefLkhood(alpha, labels, gtLabels, regCoef) % no
   %alpha(alpha < 0) = 0;
   alpha = exp(alpha);
   % flatten all folds, remember reverse index
-  objLabelsAlpha = [];  % sum_i prod_k ( p_ik ^alpha_k (x_j) )
-  objLabelsAlphaLnP = []; % sum_i [ prod_k ( p_ik ^alpha_k (x_j) ) * ln p_ik (x_j)]
-  objLabelsAlphaLnPLnP = []; % sum_i [ prod_k ( p_ik ^alpha_k (x_j) ) * ln p_ik (x_j) * ln p_il (x_j)]
+  objLabelsAlpha = [];  % prod_k ( p_ik ^alpha_k (x_j) )
+  objLabelsAlphaLnP = []; %[ prod_k ( p_ik ^alpha_k (x_j) ) * ln p_ik (x_j)]
+  objLabelsAlphaLnPLnP = []; % [ prod_k ( p_ik ^alpha_k (x_j) ) * ln p_ik (x_j) * ln p_il (x_j)]
   lnPforGtruth = []; % ln p_t_j (x_j)
   for fold = 1:length(labels)
     objLabelsAlphaFold = ones(length(labels{fold}), size(gtLabels{fold}, 2));

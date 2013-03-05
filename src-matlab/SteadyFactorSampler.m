@@ -4,7 +4,7 @@ classdef SteadyFactorSampler < FactorSampler
 % In other words, active factor types are all the types sampled during training.
 % To implement it, you only need to implement:
 %  * numFolds = getNumFolds(self)
-%  * setTestData(self, testData)
+%  * setTestData(self, testData) and testDataAreSet(self)
 %  * a constructor that calls SteadyFactorSampler(ftypenums) to provide factor type IDs 
 %     and sets the following: foldsMould, factors, foldsMouldTest, factorsTest
   
@@ -20,14 +20,14 @@ classdef SteadyFactorSampler < FactorSampler
     % foldsMould is a template for folds that contains variables' features 
     % and ground truth labels. When sample() is called, only d-factors of 
     % the corresponding type are added to the copy of foldsMould.
-    % See the documentation to FactorSample.sample(), factorPack argument.
+    % See the documentation for FactorSample.sample(), factorPack argument.
     % foldsMould has the same format, but the factors fields are not set.
     foldsMould
     
     % factors is a 2D cell array of size nfolds x nftypes that caches the
     % factors of all (active) factor types. The corresponding columns are
     % used in calls of sample(). Individual elements are cell arrays.
-    % See the documentation to FactorSample.sample(), factorPack argument.
+    % See the documentation for FactorSample.sample(), factorPack argument.
     % factors{fold,ftype} has the same format as factorPack.factors
     factors 
     

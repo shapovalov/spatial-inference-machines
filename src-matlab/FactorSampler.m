@@ -10,6 +10,8 @@ classdef FactorSampler < matlab.mixin.Copyable
   methods (Abstract)
     % Sets test data to infer labels
     setTestData(self, testData) 
+    % checks if test data are available
+    testDataAreSet(self)
     
     % Picks next factor type and collects all the factors belonging to that
     %INPUT:

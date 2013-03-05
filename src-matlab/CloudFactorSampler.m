@@ -44,6 +44,9 @@ classdef CloudFactorSampler < SteadyFactorSampler
         [self.foldsMouldTest structuredFactors spatialFactors] = ...
           self.prepareFoldsMould(test, 1, pcdPathMask);
         self.factorsTest = [structuredFactors spatialFactors];
+      else
+        self.foldsMouldTest = [];
+        self.factorsTest = [];
       end
     end
     
@@ -58,13 +61,15 @@ classdef CloudFactorSampler < SteadyFactorSampler
       self.factorsTest = [structuredFactors spatialFactors];
     end
     
+    function res = testDataAreSet(self)
+      res = ~isempty(self.foldsMouldTest);
+    end
+    
   end
   
   methods (Access = private)
     function [folds structuredFactors spatialFactors] = ...
         prepareFoldsMould(self, features, numFolds, pcdPathMask)
-      %assert(mod(size(features,1), self.NUM_FOLDS) == 0); %TODO: not really
-      
       sceneIdx = unique(features.nodesFtLb(:,1));
       
       foldIdxNodes = zeros(1, size(features.nodesFtLb, 1));
