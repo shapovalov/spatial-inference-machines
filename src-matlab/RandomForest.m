@@ -3,6 +3,7 @@ classdef RandomForest < Classifier
   
   properties (Constant)
     NUM_TREES = 100
+    MIN_LEAF_SIZE = 1
   end
   
   properties (SetAccess = private, GetAccess = private)
@@ -12,11 +13,12 @@ classdef RandomForest < Classifier
   
   properties (SetAccess = private)
     isTrained = false
+    meanDepth
   end
   
   methods
     function self = RandomForest()
-      addpath('randomforest-matlab/temp/RF_Class_C');
+      addpath('randomforest-matlab/RF_Class_C');
     end
     
     function train(self, features, labels, tmpFold)
@@ -57,11 +59,16 @@ classdef RandomForest < Classifier
       %save(sprintf('tmpRFinput%d.mat', tmpFold), 'features', 'cols', 'oldf', 'oldc');
       
       %thispwd = pwd; cd('randomforest-matlab/RF_Class_C');  % may be slow?
+      extra_options.nodesize = self.MIN_LEAF_SIZE;
       self.model = classRF_train(features, cols, self.NUM_TREES, ...
-        floor(sqrt(size(features, 2)))); % one tree and all features
-        %size(features, 2));
+        floor(sqrt(size(features, 2))), extra_options);
+        %size(features, 2), extra_options);
       %cd(thispwd);
       self.isTrained = true;
+      
+      [~, i] = max(double(self.model.treemap>0) .* ...
+        repmat((1:size(self.model.treemap,1))', 1, self.NUM_TREES*2));
+      self.meanDepth = mean(log2(i));
     end
     
     function labels = classify(self, features)

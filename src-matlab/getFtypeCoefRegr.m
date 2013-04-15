@@ -15,7 +15,7 @@ function [val grad ] = getFtypeCoefRegr(alpha, labels, gtLabels, regCoef) % note
         labels{fold}{site} = zeros(0, size(gtLabels{fold}, 2)+1);
       end
       
-      siteLabels = log(labels{fold}{site}(:,1:end-1));  % TODO: try log here!
+      siteLabels = log(labels{fold}{site}(:,1:end-1));  
       siteFtypes = labels{fold}{site}(:,end)+1; % +1 because of 1-based indexing
       
       allPsite = zeros(length(alpha), size(siteLabels, 2));

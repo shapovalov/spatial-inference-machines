@@ -14,9 +14,16 @@ classdef InferenceMachine < handle
   
   properties (SetAccess = private)
     isTrained = false
+    meanDepth
   end
   
   methods
+    % Constructs the class. Input arguments:
+    % num_jobs: number of parallel training jobs (default: 6)
+    % lkhood_ftype_powers: defines the objective function when optimizing
+    % factor type coefficients:
+    %  true (default): sum of normalized products (as in the paper)
+    %  false: product of normalized products
     function self = InferenceMachine(num_jobs, lkhood_ftype_powers)
       if ~exist('num_jobs', 'var')
         num_jobs = 6;
@@ -29,12 +36,29 @@ classdef InferenceMachine < handle
       self.lkhood_ftype_powers = lkhood_ftype_powers;
     end
     
-    function testLabels = train(self, samplers) 
+    % Trains inference machine using the set encapsulated in factor
+    % samplers. If a test set is additionally provided, infers its labels.
+    %INPUT:
+    % samplers: cell array of the length equal to the number of rounds.
+    %   Elements are instantiations of FactorSampler that store training
+    %   set and (optionally) test set
+    %OUTPUT:
+    % trainLabels: cell array of length nRounds, each element is cell array
+    %   of inferred training set labels divided by folds
+    % testLabels: if samplers{round}.testDataAreSet(), then
+    %   testLabels{round} contains an over-complete representations for
+    %   inferred labels for the test set
+    function [trainLabels testLabels] = train(self, samplers) 
       numRounds = length(samplers);
       self.classifiers = self.initClassifiersArray(numRounds, samplers{1}.getNumFtypes());
       labels = cell(1,samplers{1}.getNumFolds());
       
-      testLabels = cell(1,numRounds); % the result, if the samplers require test
+      if nargout > 0
+        trainLabels = cell(1,numRounds);
+      end
+      if nargout > 1
+        testLabels = cell(1,numRounds); % the result, if the samplers require test
+      end
       
       matlabpool('open', self.num_jobs);
       cleaner = onCleanup(@() matlabpool('close'));
@@ -155,17 +179,25 @@ classdef InferenceMachine < handle
           labels, 'UniformOutput', false);
         assert(all(all(~isnan(labels{1}))));  % check only the first fold
         
+        if nargout > 0
+          trainLabels{round} = labels;
+        end
+        
         factorPacks = samplers{round}.sampleActiveFactors();
         
         % then, train final classifier 
+        self.meanDepth = zeros(1,length(idx));
         for ftypenumnum = 1:length(idx)
           ftypenum = idx(ftypenumnum);
           [roundFeat, roundLab] = catListByFtype(factorPacks, ftypenum, [], prevLabels);
           self.classifiers{round, ftypenumnum}.train(roundFeat, roundLab, 0);
+          %TEMP
+          self.meanDepth(ftypenumnum) = self.classifiers{round, ftypenumnum}.meanDepth;
         end
+        disp(self.meanDepth);
         
         % test, if needed
-        if samplers{round}.testDataAreSet()
+        if nargout > 1 && samplers{round}.testDataAreSet()
           if round == 1
             testLabels{round} = self.inferImpl(samplers, round);
           else
@@ -179,10 +211,14 @@ classdef InferenceMachine < handle
     
     
     
-    function labels = infer(self, samplers)
+    function [labels allLabels] = infer(self, samplers)
       assert(self.isTrained);
       
-      labels = self.inferImpl(samplers, 1:length(samplers));
+      if nargin < 2
+        labels = self.inferImpl(samplers, 1:length(samplers));
+      else
+        [labels allLabels] = self.inferImpl(samplers, 1:length(samplers));
+      end
     end
     
     function setRegCoef(self, coef)
@@ -193,10 +229,14 @@ classdef InferenceMachine < handle
   
   
   methods (Access = private)
-    function labels = inferImpl(self, samplers, roundNums, labels)
+    function [labels allLabels] = inferImpl(self, samplers, roundNums, labels)
       assert(all(sort(roundNums) == roundNums)); % roundNums are sorted
       assert(nargin >= 4 || roundNums(1) == 1);  % either labels are given or start from first round
          
+      if nargin > 1
+        allLabels = cell(1,max(roundNums));
+      end
+      
       for round = roundNums
         [factorPacks idx] = samplers{round}.sampleActiveFactors(true);
         assert(~isempty(factorPacks));
@@ -250,6 +290,10 @@ classdef InferenceMachine < handle
         % HACK: set all 0s for labels w/o factors (mean returns NaNs)
         for i = 1:length(labels),  labels{i}(isnan(labels{i})) = 1/size(labels{1}, 2); end
         assert(all(all(~isnan(labels{1}))));  % check only the first fold
+        
+        if nargin > 1
+          allLabels{round} = labels;
+        end
       end
     end
   end
