@@ -33,7 +33,7 @@ classdef SteadyFactorSampler < FactorSampler
     
     % The following two fields should be pre-computed in the constructor,
     % if the test set is provided. They should also be computed in setTestData()
-    % The format is the same as for foldsMould/factors fields. Not that it
+    % The format is the same as for foldsMould/factors fields. Note that it
     % only makes sense to use one fold in test data.
     foldsMouldTest
     factorsTest % 2D cell array of factor struct arrays

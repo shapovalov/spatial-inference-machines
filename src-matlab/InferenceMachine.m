@@ -73,6 +73,7 @@ classdef InferenceMachine < handle
         % first, train temporary classifiers on hold-out examples
         while true   % loop over factor types
           [factorPacks ftypenum] = samplers{round}.sample(accPrevFact);
+          fprintf('Factor type #%d\n', ftypenum);
           if isempty(factorPacks) % iteration is finished
             break
           end
@@ -82,7 +83,8 @@ classdef InferenceMachine < handle
           end
           
           gtLabDists = zeros(size(factorPacks{1}.labels,2), size(factorPacks{1}.labels,2)); % for entropy
-          parfor foldNum = 1:samplers{round}.getNumFolds()
+          %parfor foldNum = 1:samplers{round}.getNumFolds()
+          for foldNum = 1:samplers{round}.getNumFolds()
             tmpClassifier = InferenceMachine.initClassifiersArray(1, 1); 
             tmpClassifier = tmpClassifier{1};
           
@@ -111,7 +113,7 @@ classdef InferenceMachine < handle
             
             % to compute entropy (relevant for non-static factor samplers)
             gtLabDists = gtLabDists + ftypeLabels' * (gtLabels > 0.5);
-          end  % loop over factor types
+          end  % loop over folds
           
           % minus entropy
           gtLabDists = bsxfun(@rdivide, gtLabDists, sum(gtLabDists, 1)); % balance gt labels
@@ -119,7 +121,7 @@ classdef InferenceMachine < handle
           gtLabDists = bsxfun(@rdivide, gtLabDists, sum(gtLabDists, 2));
           labEntropys = sum(gtLabDists .* log(gtLabDists), 2);
           accPrevFact = sum(ftsum .* labEntropys); 
-        end  % loop over folds
+        end  % loop over factor types
 
         % find optimal factor type weights (powers)
         idx = samplers{round}.getActiveFtypes();
@@ -190,9 +192,9 @@ classdef InferenceMachine < handle
         for ftypenumnum = 1:length(idx)
           ftypenum = idx(ftypenumnum);
           [roundFeat, roundLab] = catListByFtype(factorPacks, ftypenum, [], prevLabels);
-          self.classifiers{round, ftypenumnum}.train(roundFeat, roundLab, 0);
+          self.classifiers{round, ftypenumnum}.train(roundFeat, roundLab);
           %TEMP
-          self.meanDepth(ftypenumnum) = self.classifiers{round, ftypenumnum}.meanDepth;
+          %self.meanDepth(ftypenumnum) = self.classifiers{round, ftypenumnum}.meanDepth;
         end
         disp(self.meanDepth);
         
@@ -204,6 +206,9 @@ classdef InferenceMachine < handle
             testLabels{round} = self.inferImpl(samplers, round, testLabels{round-1});
           end
         end
+        
+        % TEMP
+        %save('MSRC/currLabels.mat', 'trainLabels', 'testLabels');
       end
       
       self.isTrained = true;
@@ -221,6 +226,8 @@ classdef InferenceMachine < handle
       end
     end
     
+    % Sets the regularization coefficient for the second stage.
+    %   Set < 0 to skip tuning weights and set them to the uniform vector. 
     function setRegCoef(self, coef)
       self.reg_coef = coef;
     end
@@ -303,6 +310,7 @@ classdef InferenceMachine < handle
     function classifiers = initClassifiersArray(y, x)
       classifiers = cell(y, x); 
       classifiers = cellfun(@(~)RandomForest(), classifiers, 'UniformOutput', false);
+      %classifiers = cellfun(@(~)LogitRegression(), classifiers, 'UniformOutput', false);
     end
     
     function [res] = softmax(alpha, x)
